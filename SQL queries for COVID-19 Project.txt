@@ -1,0 +1,151 @@
+SELECT *
+%FROM `new-project-345709.Covid.CovidDeaths`
+ORDER BY 3,4
+
+SELECT *
+FROM `new-project-345709.Covid.CovidVaccinations`
+ORDER BY 3,4
+
+-- Select Data that we are going to be using
+	SELECT location, total_tests, new_cases, total_deaths, population
+	FROM `new-project-345709.Covid.CovidDeaths`
+	ORDER BY 1,2
+
+--Looking at Total Cases vs Total Deaths %
+	SELECT location, date,total_cases, total_deaths, (total_deaths/total_cases)*100 AS percentage_deaths
+	FROM `new-project-345709.Covid.CovidDeaths`
+	ORDER BY 1,2
+
+--Looking at Total Cases vs Total Deaths % in SADC
+	SELECT location, date,total_cases, total_deaths, (total_deaths/total_cases)*100 AS percentage_deaths
+	FROM `new-project-345709.Covid.CovidDeaths`
+	WHERE location = 'Zimbabwe' OR location = 'Botswana' OR location = 'Lesotho' 
+	OR location = 'Mozambique' OR location = 'Zambia' OR location = 'Mauritius'
+	OR location = 'Angola' OR location = 'Tanzania' OR location = 'Seychelles'
+	OR location = 'Madagascar' OR location = 'Swaziland'
+	ORDER BY 1,2;
+
+--Looking at Total Cases vs Population in SADC
+	SELECT location, date,total_cases, population, (total_cases/population)*100 AS percentage_cases
+	FROM `new-project-345709.Covid.CovidDeaths`
+	WHERE location = 'Zimbabwe' OR location = 'South Africa' 
+	OR location = 'Namibia' OR location = 'Botswana' OR location = 'Lesotho' 
+	OR location = 'Mozambique' OR location = 'Zambia' OR location = 'Mauritius'
+	OR location = 'Angola' OR location = 'Tanzania' OR location = 'Seychelles'
+	OR location = 'Madagascar' OR location = 'Swaziland'
+	ORDER BY 1,2;
+
+--Looking at Countries with Highest Infection Rate compared to Population
+	SELECT location, population, MAX(total_cases) AS HighestInfectionCount,
+	MAX((total_cases/population))*100 AS PercentPopulationInfected,
+	FROM `new-project-345709.Covid.CovidDeaths`
+	WHERE location = 'Zimbabwe' OR location = 'South Africa' 
+	OR location = 'Namibia' OR location = 'Botswana' OR location = 'Lesotho' 
+	OR location = 'Mozambique' OR location = 'Zambia' OR location = 'Mauritius'
+	OR location = 'Angola' OR location = 'Tanzania' OR location = 'Seychelles'
+	OR location = 'Madagascar' OR location = 'Swaziland'
+	GROUP BY location, population
+	ORDER BY PercentPopulationInfected desc
+
+-- Showing Countries with Highest Death Count per population
+
+	SELECT location, MAX(total_deaths) AS TotalDeathCount
+	FROM `new-project-345709.Covid.CovidDeaths`
+	WHERE continent is not NULL
+	GROUP BY location
+	ORDER BY TotalDeathCount desc
+
+-- LET'S BREAK THINGS DOWN BY CONTINENT
+	SELECT location, MAX(total_deaths) AS TotalDeathCount
+	FROM `new-project-345709.Covid.CovidDeaths`
+	WHERE continent is not NULL
+	GROUP BY location
+	ORDER BY TotalDeathCount desc
+
+-- Global numbers
+
+-- Global total new cases, total new deaths and total death percentages
+	SELECT SUM(new_cases) AS Total_new_cases, SUM(new_deaths) AS Total_new_deaths,
+	SUM(new_deaths)/SUM(new_cases)*100 AS DeathPercentage
+	FROM `new-project-345709.Covid.CovidDeaths`
+	WHERE continent is not null
+	GROUP BY date
+	ORDER BY 1,2;
+
+-- Global new_cases and new_deaths  ordered by day
+	SELECT date, SUM(new_cases) AS Total_new_cases, SUM(new_deaths) AS Total_new_deaths,
+	SUM(new_deaths)/SUM(new_cases)*100 AS DeathPercentage
+	FROM `new-project-345709.Covid.CovidDeaths`
+	WHERE continent is not null
+	GROUP BY date
+	ORDER BY 1,2
+
+-- Looking at the vaccinations
+
+--Joining coviddeaths and covidvaccinations on 'location' and 'date' column
+
+	SELECT * 
+	FROM `new-project-345709.Covid.CovidDeaths` AS dea
+	JOIN `new-project-345709.Covid.CovidVaccinations` AS vac
+	 	ON dea.location = vac.location
+  		AND dea.date = vac.date
+
+ --Looking at Total Population vs Vaccinations
+	SELECT dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations
+	FROM `new-project-345709.Covid.CovidDeaths` AS dea
+	JOIN `new-project-345709.Covid.CovidVaccinations` AS vac
+	ON dea.location = vac.location
+	AND dea.date = vac.date
+	WHERE dea.continent is not null 
+	ORDER BY 2,3 
+
+--LOOKING AT THE OVER FUNCTION AND THE PARTITION BY FUNCTION
+	SELECT dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations,
+	SUM(vac.new_vaccinations) OVER (Partition by dea.location ORDER BY dea.location,
+	dea.date) AS Rolling_count
+	FROM `new-project-345709.Covid.CovidDeaths` AS dea
+	JOIN `new-project-345709.Covid.CovidVaccinations` AS vac
+	ON dea.location = vac.location
+	AND dea.date = vac.date
+	WHERE dea.continent is not null 
+	ORDER BY 2,3 
+
+ --LOOKING AT THE OVER FUNCTION AND THE PARTITION BY FUNCTION
+	SELECT dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations,
+	SUM(vac.new_vaccinations) OVER (Partition by dea.location ORDER BY dea.location,
+	dea.date) AS Rolling_count
+	FROM `new-project-345709.Covid.CovidDeaths` AS dea
+	JOIN `new-project-345709.Covid.CovidVaccinations` AS vac
+	ON dea.location = vac.location
+	AND dea.date = vac.date
+	WHERE dea.continent is not null 
+	ORDER BY 2,3 
+
+ --USING CTE (Common Table Expressions)
+
+	With PopvsVac as (
+	SELECT dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations,
+	SUM(vac.new_vaccinations) OVER (Partition by dea.location ORDER BY dea.location,
+	dea.date) AS Rolling_count
+	FROM `new-project-345709.Covid.CovidDeaths` AS dea
+	JOIN `new-project-345709.Covid.CovidVaccinations` AS vac
+	ON dea.location = vac.location
+	AND dea.date = vac.date
+	WHERE dea.continent is not null 
+	ORDER BY 2,3 
+	)
+	SELECT *, (Rolling_count/population)*100 AS Rolling_percent
+	FROM PopvsVac
+
+--Creating View to store the data for later visualizations
+
+	Create View Covid.PercentPopulationVaccinated AS
+  		SELECT dea.continent, dea.location, dea.date, dea.population, vac.new_vaccinations,
+		SUM(vac.new_vaccinations) OVER (Partition by dea.location ORDER BY dea.location,
+		dea.date) AS Rolling_count
+		FROM `new-project-345709.Covid.CovidDeaths` AS dea
+		JOIN `new-project-345709.Covid.CovidVaccinations` AS vac
+   			ON dea.location = vac.location
+  			AND dea.date = vac.date
+ 		WHERE dea.continent is not null 
+ 
